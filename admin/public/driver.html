@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vinculación Conductor - ProtoUber</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #0A0A0A; color: white; font-family: sans-serif; }
+        .neon-glow { text-shadow: 0 0 10px #D9FF00; color: #D9FF00; }
+        .bg-carbon { background-color: #121212; }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center min-h-screen p-6 text-center">
+    
+    <div class="bg-carbon border border-white/5 p-8 rounded-[2.5rem] shadow-2xl max-w-sm w-full">
+        <div class="w-16 h-16 bg-[#D9FF00] rounded-2xl flex items-center justify-center text-black mx-auto mb-6 shadow-[0_0_20px_#D9FF00]">
+            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><path d="M9 17h6"/><circle cx="17" cy="17" r="2"/></svg>
+        </div>
+        
+        <h1 class="text-2xl font-bold mb-2 uppercase tracking-tighter italic">Vincular GPS</h1>
+        <p class="text-slate-500 text-sm mb-8 font-medium">Dale este código al administrador para registrarte en el sistema.</p>
+        
+        <div id="code-container" class="bg-black/40 border border-[#D9FF00]/20 py-6 rounded-3xl mb-8">
+            <span id="driver-code" class="text-6xl font-black neon-glow tracking-tighter italic">----</span>
+        </div>
+
+        <div id="status-container" class="space-y-4">
+            <div class="flex items-center justify-center gap-3">
+                <div id="gps-dot" class="w-2 h-2 bg-slate-600 rounded-full"></div>
+                <span id="gps-status" class="text-[10px] font-black uppercase tracking-widest text-slate-500 italic">Esperando GPS...</span>
+            </div>
+            <p id="instruction" class="text-xs text-slate-500">Acepta los permisos de ubicación para comenzar.</p>
+        </div>
+    </div>
+
+    <p class="mt-8 text-[10px] font-bold text-slate-600 uppercase tracking-widest leading-loose">
+        ProtoUber Fusagasugá<br>Sistema de Gestión Satelital
+    </p>
+
+    <script>
+        const codeElement = document.getElementById('driver-code');
+        const statusDot = document.getElementById('gps-dot');
+        const statusText = document.getElementById('gps-status');
+        const instruction = document.getElementById('instruction');
+
+        let currentCode = null;
+
+        // 1. Obtener código
+        async function getCode() {
+            try {
+                const res = await fetch('/api/driver/new-code');
+                const data = await res.json();
+                currentCode = data.code;
+                codeElement.innerText = currentCode;
+            } catch (err) {
+                console.error("Error al obtener código", err);
+            }
+        }
+
+        // 2. Enviar GPS
+        function startGps() {
+            if ("geolocation" in navigator) {
+                navigator.geolocation.watchPosition(async (position) => {
+                    const { latitude, longitude } = position.coords;
+                    
+                    statusDot.classList.replace('bg-slate-600', 'bg-[#D9FF00]');
+                    statusDot.classList.add('animate-pulse');
+                    statusText.innerText = "GPS Activo y Transmitiendo";
+                    statusText.classList.replace('text-slate-500', 'text-[#D9FF00]');
+                    instruction.innerText = "Mantén esta pantalla abierta";
+
+                    if (currentCode) {
+                        await fetch('/api/driver/update-gps', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                code: currentCode,
+                                lat: latitude,
+                                lng: longitude
+                            })
+                        });
+                    }
+                }, (err) => {
+                    statusText.innerText = "Error de GPS: " + err.message;
+                    statusText.classList.replace('text-slate-500', 'text-rose-500');
+                }, {
+                    enableHighAccuracy: true,
+                    maximumAge: 10000,
+                    timeout: 5000
+                });
+            } else {
+                statusText.innerText = "GPS no disponible";
+            }
+        }
+
+        getCode().then(startGps);
+    </script>
+</body>
+</html>

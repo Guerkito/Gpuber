@@ -56,17 +56,27 @@ function App() {
   const [wsStatus, setWsStatus] = useState({ connected: false, qr: null });
 
   const fetchData = async () => {
+    // Carga de Conductores y Viajes
     try {
-      const [driversRes, tripsRes, wsRes] = await Promise.all([
+      const [driversRes, tripsRes] = await Promise.all([
         fetch(`${API_BASE}/conductores`),
-        fetch(`${API_BASE}/viajes`),
-        fetch(`${API_BASE}/whatsapp/status`)
+        fetch(`${API_BASE}/viajes`)
       ]);
-      setDrivers(await driversRes.json());
-      setTrips(await tripsRes.json());
-      setWsStatus(await wsRes.json());
+      if (driversRes.ok) setDrivers(await driversRes.json());
+      if (tripsRes.ok) setTrips(await tripsRes.json());
+    } catch (e) { console.error("Error base:", e); }
+
+    // Carga de WhatsApp (independiente)
+    try {
+      const wsRes = await fetch(`${API_BASE}/whatsapp/status`);
+      const data = await wsRes.json();
+      if (wsRes.ok) {
+        setWsStatus(data);
+      } else {
+        setWsStatus({ connected: false, error: data.error || 'Error de conexión con el servidor' });
+      }
     } catch (error) {
-      console.error("Error fetching data:", error);
+      setWsStatus({ connected: false, error: 'No se pudo contactar con el servidor API' });
     }
   };
 

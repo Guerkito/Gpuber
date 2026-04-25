@@ -43,7 +43,7 @@ function HeatmapLayer({ points }) {
   return null;
 }
 
-const API_BASE = window.location.origin === 'http://localhost:5173' 
+const API_BASE = window.location.hostname === 'localhost' 
   ? 'http://localhost:3000/api' 
   : '/api';
 

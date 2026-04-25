@@ -127,21 +127,32 @@ router.get('/whatsapp/qr', async (req, res) => {
     try {
         const { EVOLUTION_API_URL, EVOLUTION_API_KEY, EVOLUTION_INSTANCE } = process.env;
 
+        if (!EVOLUTION_API_URL) {
+            return res.status(500).json({ error: 'Falta la URL de Evolution API en las variables de entorno.' });
+        }
+
+        console.log(`Intentando conectar a: ${EVOLUTION_API_URL}/instance/connect/${EVOLUTION_INSTANCE}`);
+
         const qrRes = await fetch(`${EVOLUTION_API_URL}/instance/connect/${EVOLUTION_INSTANCE}`, {
             headers: { 'apikey': EVOLUTION_API_KEY }
         });
         
+        if (!qrRes.ok) {
+            const errorText = await qrRes.text();
+            return res.status(qrRes.status).json({ error: `La Evolution API respondió con error: ${qrRes.status}. Verifica que la URL y la instancia sean correctas.` });
+        }
+
         const qrData = await qrRes.json();
         const code = qrData.base64 || qrData.code || qrData.qrcode?.base64;
 
         if (!code) {
-            return res.status(404).json({ error: 'La API no devolvió un código QR. Intenta borrar la sesión primero.' });
+            return res.status(404).json({ error: 'La instancia de WhatsApp no está disponible para conectar.' });
         }
 
         res.json({ qr: code });
     } catch (error) {
         console.error('Error QR:', error.message);
-        res.status(500).json({ error: 'Error al generar el código QR' });
+        res.status(500).json({ error: `No se pudo contactar con tu servidor de Evolution API (${EVOLUTION_API_URL}). ¿Está encendido?` });
     }
 });
 

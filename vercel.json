@@ -1,22 +1,9 @@
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "src/index.js",
-      "use": "@vercel/node"
-    },
-    {
-      "src": "admin/package.json",
-      "use": "@vercel/static-build",
-      "config": { "distDir": "dist" }
-    }
-  ],
-  "routes": [
-    { "src": "/api/whatsapp/(.*)", "dest": "src/index.js" },
-    { "src": "/api/(.*)", "dest": "src/index.js" },
-    { "src": "/webhook", "dest": "src/index.js" },
-    { "src": "/driver", "dest": "src/index.js" },
-    { "src": "/admin/(.*)", "dest": "admin/$1" },
-    { "src": "/(.*)", "dest": "admin/$1", "check": true }
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api" },
+    { "source": "/webhook", "destination": "/api" },
+    { "source": "/driver", "destination": "/api" },
+    { "source": "/(.*)", "destination": "/admin/$1" }
   ]
 }

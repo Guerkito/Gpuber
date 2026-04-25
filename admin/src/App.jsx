@@ -251,11 +251,33 @@ function SidebarNavItem({ active, icon, label, onClick, isToggle }) {
 }
 
 function WhatsAppView({ status, refresh }) {
+    const [loadingQr, setLoadingQr] = useState(false);
+    const [qrCode, setQrCode] = useState(null);
+    const [qrError, setQrError] = useState(null);
+
     const logout = async () => {
         if (confirm('¿Cerrar sesión de WhatsApp?')) {
             await fetch(`${API_BASE}/whatsapp/logout`, { method: 'POST' });
+            setQrCode(null);
             refresh();
         }
+    };
+
+    const generateQR = async () => {
+        setLoadingQr(true);
+        setQrError(null);
+        try {
+            const res = await fetch(`${API_BASE}/whatsapp/qr`);
+            const data = await res.json();
+            if (res.ok) {
+                setQrCode(data.qr);
+            } else {
+                setQrError(data.error || 'Error al obtener QR');
+            }
+        } catch (e) {
+            setQrError('No hay respuesta del servidor');
+        }
+        setLoadingQr(false);
     };
 
     return (
@@ -268,49 +290,49 @@ function WhatsAppView({ status, refresh }) {
                 <h3 className="text-2xl font-black text-slate-800 tracking-tighter uppercase italic mb-2">
                     {status.connected ? 'WhatsApp Conectado' : 'Vincular WhatsApp'}
                 </h3>
-                <p className="text-sm text-slate-500 font-medium mb-8">
-                    {status.connected 
-                        ? 'Tu bot está activo y procesando viajes en Fusagasugá.' 
-                        : 'Escanea el código QR con tu aplicación de WhatsApp para activar el bot.'}
-                </p>
 
                 {status.connected ? (
-                    <div className="space-y-4">
+                    <div className="space-y-4 mt-6">
                         <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-3xl flex items-center justify-between">
-                            <span className="text-[10px] font-black uppercase text-emerald-700 tracking-widest italic">Estado del Servicio</span>
+                            <span className="text-[10px] font-black uppercase text-emerald-700 tracking-widest italic">Estado</span>
                             <span className="text-xs font-bold text-emerald-600 uppercase flex items-center gap-2">
                                 <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div> Operativo
                             </span>
                         </div>
-                        <button onClick={logout} className="w-full flex items-center justify-center gap-2 bg-rose-50 text-rose-600 p-4 rounded-2xl font-black uppercase tracking-widest hover:bg-rose-100 transition-colors">
-                            <LogOut size={18} /> Cerrar Sesión
+                        <button onClick={logout} className="w-full flex items-center justify-center gap-2 bg-rose-50 text-rose-600 p-4 rounded-2xl font-black uppercase tracking-widest hover:bg-rose-100 transition-colors mt-8">
+                            <LogOut size={18} /> Desvincular Bot
                         </button>
                     </div>
                 ) : (
-                    <div className="space-y-6">
-                        {status.error ? (
-                            <div className="bg-rose-50 border border-rose-100 p-6 rounded-[2rem] text-rose-600">
-                                <XCircle className="mx-auto mb-2" size={32} />
-                                <p className="text-xs font-bold uppercase tracking-widest leading-relaxed">{status.error}</p>
+                    <div className="space-y-6 mt-6">
+                        {qrError && (
+                            <div className="bg-rose-50 border border-rose-100 p-4 rounded-2xl text-rose-600 text-[10px] font-bold uppercase italic">
+                                {qrError}
                             </div>
-                        ) : status.qr ? (
+                        )}
+
+                        {qrCode ? (
                             <div className="bg-white p-4 border-2 border-dashed border-blue-200 rounded-[2.5rem] flex items-center justify-center mx-auto aspect-square w-64 shadow-inner">
-                                {status.qr.startsWith('data:image') ? (
-                                    <img src={status.qr} alt="WhatsApp QR" className="w-full h-full object-contain" />
+                                {qrCode.startsWith('data:image') ? (
+                                    <img src={qrCode} alt="WhatsApp QR" className="w-full h-full object-contain rounded-2xl" />
                                 ) : (
                                     <div className="flex flex-col items-center gap-2">
-                                        <p className="text-4xl font-black tracking-tighter text-blue-600">{status.qr}</p>
-                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Código de emparejamiento</p>
+                                        <p className="text-4xl font-black tracking-tighter text-blue-600">{qrCode}</p>
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Código numérico</p>
                                     </div>
                                 )}
                             </div>
                         ) : (
-                            <div className="flex flex-col items-center gap-4 py-12">
-                                <RefreshCw className="text-blue-300 animate-spin" size={48} />
-                                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Conectando con la API...</p>
-                            </div>
+                            <button 
+                                onClick={generateQR}
+                                disabled={loadingQr}
+                                className="w-full bg-blue-600 text-white p-5 rounded-3xl font-black uppercase tracking-widest shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+                            >
+                                {loadingQr ? <RefreshCw className="animate-spin" size={20} /> : <Smartphone size={20} />}
+                                {loadingQr ? 'Generando...' : 'Obtener Código QR'}
+                            </button>
                         )}
-                        <button onClick={refresh} className="text-[10px] font-black uppercase text-blue-600 underline tracking-widest hover:text-blue-800 transition-colors">Reintentar Ahora</button>
+                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Escanea para activar ProtoUber Fusa</p>
                     </div>
                 )}
             </div>

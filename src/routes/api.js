@@ -94,4 +94,72 @@ router.get('/viajes', (req, res) => {
     }
 });
 
+// --- RUTAS DE WHATSAPP (EVOLUTION API) ---
+
+// 1. Obtener solo el estado (Rápido)
+router.get('/whatsapp/status', async (req, res) => {
+    try {
+        const { EVOLUTION_API_URL, EVOLUTION_API_KEY, EVOLUTION_INSTANCE } = process.env;
+        
+        if (!EVOLUTION_API_URL || !EVOLUTION_API_KEY || !EVOLUTION_INSTANCE) {
+            return res.status(500).json({ error: 'Configuración incompleta en Vercel (Variables .env)' });
+        }
+
+        const response = await fetch(`${EVOLUTION_API_URL}/instance/connectionState/${EVOLUTION_INSTANCE}`, {
+            headers: { 'apikey': EVOLUTION_API_KEY }
+        });
+        
+        const data = await response.json();
+        console.log(`Estado de instancia ${EVOLUTION_INSTANCE}:`, data.instance?.state);
+        
+        res.json({ 
+            connected: data.instance?.state === 'open', 
+            state: data.instance?.state || 'unknown' 
+        });
+    } catch (error) {
+        console.error('Error Status:', error.message);
+        res.status(500).json({ error: 'No se pudo conectar con el servidor de WhatsApp' });
+    }
+});
+
+// 2. Generar QR (Solo cuando el usuario lo pida)
+router.get('/whatsapp/qr', async (req, res) => {
+    try {
+        const { EVOLUTION_API_URL, EVOLUTION_API_KEY, EVOLUTION_INSTANCE } = process.env;
+
+        const qrRes = await fetch(`${EVOLUTION_API_URL}/instance/connect/${EVOLUTION_INSTANCE}`, {
+            headers: { 'apikey': EVOLUTION_API_KEY }
+        });
+        
+        const qrData = await qrRes.json();
+        const code = qrData.base64 || qrData.code || qrData.qrcode?.base64;
+
+        if (!code) {
+            return res.status(404).json({ error: 'La API no devolvió un código QR. Intenta borrar la sesión primero.' });
+        }
+
+        res.json({ qr: code });
+    } catch (error) {
+        console.error('Error QR:', error.message);
+        res.status(500).json({ error: 'Error al generar el código QR' });
+    }
+});
+
+// Desconectar WhatsApp
+router.post('/whatsapp/logout', async (req, res) => {
+    try {
+        const API_URL = process.env.EVOLUTION_API_URL;
+        const API_KEY = process.env.EVOLUTION_API_KEY;
+        const INSTANCE = process.env.EVOLUTION_INSTANCE;
+
+        await fetch(`${API_URL}/instance/logout/${INSTANCE}`, {
+            method: 'DELETE',
+            headers: { 'apikey': API_KEY }
+        });
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 module.exports = router;

@@ -12,26 +12,11 @@
     }
   ],
   "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "src/index.js"
-    },
-    {
-      "src": "/webhook",
-      "dest": "src/index.js"
-    },
-    {
-      "src": "/driver",
-      "dest": "src/index.js"
-    },
-    {
-      "src": "/admin/(.*)",
-      "dest": "admin/$1"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "admin/$1",
-      "check": true
-    }
+    { "src": "/api/whatsapp/(.*)", "dest": "src/index.js" },
+    { "src": "/api/(.*)", "dest": "src/index.js" },
+    { "src": "/webhook", "dest": "src/index.js" },
+    { "src": "/driver", "dest": "src/index.js" },
+    { "src": "/admin/(.*)", "dest": "admin/$1" },
+    { "src": "/(.*)", "dest": "admin/$1", "check": true }
   ]
 }

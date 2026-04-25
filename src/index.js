@@ -30,12 +30,12 @@ app.get('/driver', (req, res) => {
     res.sendFile(path.join(__dirname, '../admin/dist/driver.html'));
 });
 
-app.listen(PORT, () => {
-    console.log(`
-    ==========================================
-    🚀 ProtoUber Bot cargado con éxito
-    📡 Escuchando en el puerto: ${PORT}
-    🔗 Endpoint webhook: http://localhost:${PORT}/webhook
-    ==========================================
-    `);
-});
+// ESCUCHAR SOLO SI NO ES VERCEL
+if (process.env.NODE_ENV !== 'production') {
+    app.listen(PORT, () => {
+        console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
+    });
+}
+
+// EXPORTAR PARA VERCEL
+module.exports = app;

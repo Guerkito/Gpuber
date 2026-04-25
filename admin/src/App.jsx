@@ -278,7 +278,12 @@ function WhatsAppView({ status, refresh }) {
                     </div>
                 ) : (
                     <div className="space-y-6">
-                        {status.qr ? (
+                        {status.error ? (
+                            <div className="bg-rose-50 border border-rose-100 p-6 rounded-[2rem] text-rose-600">
+                                <XCircle className="mx-auto mb-2" size={32} />
+                                <p className="text-xs font-bold uppercase tracking-widest leading-relaxed">{status.error}</p>
+                            </div>
+                        ) : status.qr ? (
                             <div className="bg-white p-4 border-2 border-dashed border-blue-200 rounded-[2.5rem] flex items-center justify-center mx-auto aspect-square w-64 shadow-inner">
                                 {status.qr.startsWith('data:image') ? (
                                     <img src={status.qr} alt="WhatsApp QR" className="w-full h-full object-contain" />
@@ -292,10 +297,10 @@ function WhatsAppView({ status, refresh }) {
                         ) : (
                             <div className="flex flex-col items-center gap-4 py-12">
                                 <RefreshCw className="text-blue-300 animate-spin" size={48} />
-                                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Generando código...</p>
+                                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Conectando con la API...</p>
                             </div>
                         )}
-                        <button onClick={refresh} className="text-[10px] font-black uppercase text-blue-600 underline tracking-widest">Actualizar Estado</button>
+                        <button onClick={refresh} className="text-[10px] font-black uppercase text-blue-600 underline tracking-widest hover:text-blue-800 transition-colors">Reintentar Ahora</button>
                     </div>
                 )}
             </div>

@@ -6,7 +6,7 @@ import {
   Users, Car, History, Map as MapIcon, Plus, Trash2, 
   Search, Settings, Bell, MapPin, Navigation, 
   Flame, UserCheck, Timer, ChevronRight, LayoutDashboard,
-  ShieldCheck, Smartphone, Info, Menu, X
+  ShieldCheck, Smartphone, Info, Menu, X, MessageSquare, LogOut, RefreshCw
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import L from 'leaflet';
@@ -53,15 +53,18 @@ function App() {
   const [trips, setTrips] = useState([]);
   const [showHeatmap, setShowHeatmap] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [wsStatus, setWsStatus] = useState({ connected: false, qr: null });
 
   const fetchData = async () => {
     try {
-      const [driversRes, tripsRes] = await Promise.all([
+      const [driversRes, tripsRes, wsRes] = await Promise.all([
         fetch(`${API_BASE}/conductores`),
-        fetch(`${API_BASE}/viajes`)
+        fetch(`${API_BASE}/viajes`),
+        fetch(`${API_BASE}/whatsapp/status`)
       ]);
       setDrivers(await driversRes.json());
       setTrips(await tripsRes.json());
+      setWsStatus(await wsRes.json());
     } catch (error) {
       console.error("Error fetching data:", error);
     }
@@ -108,7 +111,7 @@ function App() {
             </div>
             <div>
               <h1 className="text-xl font-bold tracking-tight">ProtoUber</h1>
-              <p className="text-[10px] font-bold text-blue-600 uppercase tracking-widest leading-none">Fusagasugá</p>
+              <p className="text-[10px] font-bold text-blue-600 uppercase tracking-widest">Fusagasugá</p>
             </div>
           </div>
           <button onClick={() => setIsSidebarOpen(false)} className="lg:hidden p-2 text-slate-400">
@@ -120,6 +123,8 @@ function App() {
           <SidebarNavItem active={view === 'map'} icon={<LayoutDashboard size={20}/>} label="Mapa Central" onClick={() => { setView('map'); setIsSidebarOpen(false); }} />
           <SidebarNavItem active={view === 'drivers'} icon={<Users size={20}/>} label="Gestionar Flota" onClick={() => { setView('drivers'); setIsSidebarOpen(false); }} />
           <SidebarNavItem active={view === 'history'} icon={<History size={20}/>} label="Historial Viajes" onClick={() => { setView('history'); setIsSidebarOpen(false); }} />
+          <SidebarNavItem active={view === 'whatsapp'} icon={<MessageSquare size={20}/>} label="Conectar WhatsApp" onClick={() => { setView('whatsapp'); setIsSidebarOpen(false); }} />
+          
           <div className="pt-8 px-4 pb-2 text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Inteligencia</div>
           <SidebarNavItem active={showHeatmap} icon={<Flame size={20}/>} label="Mapa de Calor" onClick={() => setShowHeatmap(!showHeatmap)} isToggle />
         </nav>
@@ -135,12 +140,13 @@ function App() {
               {view === 'map' && 'Monitoreo Satelital'}
               {view === 'drivers' && 'Administración'}
               {view === 'history' && 'Historial'}
+              {view === 'whatsapp' && 'Configuración de WhatsApp'}
             </h2>
           </div>
           <div className="flex items-center gap-3">
              <div className="hidden sm:flex bg-slate-100 px-3 py-1.5 rounded-full border border-slate-200 items-center gap-2">
-                <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse"></div>
-                <span className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">{waitingPassengers.length} En Espera</span>
+                <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${wsStatus.connected ? 'bg-emerald-500' : 'bg-rose-500'}`}></div>
+                <span className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Bot {wsStatus.connected ? 'Online' : 'Offline'}</span>
              </div>
              <div className="w-8 h-8 lg:w-10 lg:h-10 bg-blue-100 rounded-lg flex items-center justify-center text-blue-600 font-black">A</div>
           </div>
@@ -189,7 +195,7 @@ function App() {
                       <p className="text-4xl font-black italic tracking-tighter text-slate-900">3.2 <span className="text-xs not-italic text-slate-400 uppercase">min</span></p>
                     </div>
                     <div className="flex-1 bg-white rounded-3xl border border-slate-200 p-6 flex flex-col min-h-[250px] shadow-sm overflow-hidden text-sm">
-                       <h3 className="font-bold text-slate-800 flex items-center gap-2 mb-4"><UserCheck size={18} className="text-blue-500" />Usuarios en Cola</h3>
+                       <h3 className="font-bold text-slate-800 flex items-center gap-2 mb-4"><UserCheck size={18} className="text-blue-500" />Cola</h3>
                        <div className="flex-1 overflow-y-auto space-y-2 pr-1 custom-scrollbar text-xs">
                           {waitingPassengers.map(p => (
                             <div key={p.id} className="p-3 rounded-2xl bg-slate-50 border border-slate-100 flex justify-between items-center">
@@ -204,6 +210,7 @@ function App() {
               )}
               {view === 'drivers' && <DriversView drivers={drivers} refresh={fetchData} isOnline={isOnline} />}
               {view === 'history' && <HistoryView trips={trips} />}
+              {view === 'whatsapp' && <WhatsAppView status={wsStatus} refresh={fetchData} />}
             </motion.div>
           </AnimatePresence>
         </section>
@@ -231,6 +238,69 @@ function SidebarNavItem({ active, icon, label, onClick, isToggle }) {
       )}
     </button>
   );
+}
+
+function WhatsAppView({ status, refresh }) {
+    const logout = async () => {
+        if (confirm('¿Cerrar sesión de WhatsApp?')) {
+            await fetch(`${API_BASE}/whatsapp/logout`, { method: 'POST' });
+            refresh();
+        }
+    };
+
+    return (
+        <div className="flex items-center justify-center h-full">
+            <div className="bg-white p-12 rounded-[3rem] shadow-xl border border-slate-200 max-w-md w-full text-center">
+                <div className={`w-20 h-20 mx-auto rounded-[2rem] flex items-center justify-center mb-6 shadow-lg ${status.connected ? 'bg-emerald-100 text-emerald-600 shadow-emerald-100' : 'bg-blue-50 text-blue-600 shadow-blue-100'}`}>
+                    <MessageSquare size={40} />
+                </div>
+                
+                <h3 className="text-2xl font-black text-slate-800 tracking-tighter uppercase italic mb-2">
+                    {status.connected ? 'WhatsApp Conectado' : 'Vincular WhatsApp'}
+                </h3>
+                <p className="text-sm text-slate-500 font-medium mb-8">
+                    {status.connected 
+                        ? 'Tu bot está activo y procesando viajes en Fusagasugá.' 
+                        : 'Escanea el código QR con tu aplicación de WhatsApp para activar el bot.'}
+                </p>
+
+                {status.connected ? (
+                    <div className="space-y-4">
+                        <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-3xl flex items-center justify-between">
+                            <span className="text-[10px] font-black uppercase text-emerald-700 tracking-widest italic">Estado del Servicio</span>
+                            <span className="text-xs font-bold text-emerald-600 uppercase flex items-center gap-2">
+                                <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div> Operativo
+                            </span>
+                        </div>
+                        <button onClick={logout} className="w-full flex items-center justify-center gap-2 bg-rose-50 text-rose-600 p-4 rounded-2xl font-black uppercase tracking-widest hover:bg-rose-100 transition-colors">
+                            <LogOut size={18} /> Cerrar Sesión
+                        </button>
+                    </div>
+                ) : (
+                    <div className="space-y-6">
+                        {status.qr ? (
+                            <div className="bg-white p-4 border-2 border-dashed border-blue-200 rounded-[2.5rem] flex items-center justify-center mx-auto aspect-square w-64 shadow-inner">
+                                {status.qr.startsWith('data:image') ? (
+                                    <img src={status.qr} alt="WhatsApp QR" className="w-full h-full object-contain" />
+                                ) : (
+                                    <div className="flex flex-col items-center gap-2">
+                                        <p className="text-4xl font-black tracking-tighter text-blue-600">{status.qr}</p>
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Código de emparejamiento</p>
+                                    </div>
+                                )}
+                            </div>
+                        ) : (
+                            <div className="flex flex-col items-center gap-4 py-12">
+                                <RefreshCw className="text-blue-300 animate-spin" size={48} />
+                                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Generando código...</p>
+                            </div>
+                        )}
+                        <button onClick={refresh} className="text-[10px] font-black uppercase text-blue-600 underline tracking-widest">Actualizar Estado</button>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
 }
 
 function DriversView({ drivers, refresh, isOnline }) {

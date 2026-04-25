@@ -272,10 +272,10 @@ function WhatsAppView({ status, refresh }) {
             if (res.ok) {
                 setQrCode(data.qr);
             } else {
-                setQrError(data.error || 'Error al obtener QR');
+                setQrError(data.error || `Error ${res.status}: Problema técnico`);
             }
         } catch (e) {
-            setQrError('No hay respuesta del servidor');
+            setQrError('Error fatal: El backend no responde. Revisa Vercel.');
         }
         setLoadingQr(false);
     };
